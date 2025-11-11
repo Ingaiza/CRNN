@@ -2,7 +2,7 @@
     "name"          :   "Urban Testing",
     "data"          :   {
                             "type"      :   "CSVDataManager",
-                            "path"      :   "/home/ingaiza/CRNN/dataset",
+                            "path"      :   "/content/drive/MyDrive/dataset",
                             "format"    :   "audio",
                             "loader"    :   {
                                                 "shuffle"       : true,
