@@ -1,0 +1,70 @@
+import json
+
+# Define your 3-class configuration
+colab_config = {
+  "name": "Colab_3_Class_Logger_Model",
+  "data": {
+    "type": "CSVDataManager",
+    # This path points to your dataset folder in Google Drive
+    "path": "/content/drive/MyDrive/dataset", 
+    "format": "audio",
+    "loader": {
+      "shuffle": True,
+      "batch_size": 24,
+      # Set num_workers to 2 (recommended for Colab)
+      "num_workers": 2, 
+      "drop_last": True
+    },
+    # --- THIS IS THE FIX ---
+    # The fold numbers are now strings to match the CSV data type
+    "splits": {
+      "train": ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+      "val": ["10"]
+    }
+    # ---------------------
+  },
+  "transforms": {
+    "type": "AudioTransforms",
+    "args": {
+      "channels": "avg",
+      "noise": [0.3, 0.001],
+      "crop": [0.4, 0.25]
+    }
+  },
+  "optimizer": {
+    "type": "Adam",
+    "args": {
+      "lr": 0.002,
+      "weight_decay": 0.01,
+      "amsgrad": True
+    }
+  },
+  "lr_scheduler": {
+    "type": "StepLR",
+    "args": {
+      "step_size": 10,
+      "gamma": 0.5
+    }
+  },
+  "model": {
+    "type": "AudioCRNN"
+  },
+  "train": {
+    "loss": "nll_loss",
+    "epochs": 100, 
+    "save_dir": "saved_cv/",
+    "save_p": 1,
+    "verbosity": 2,
+    "monitor": "min val_loss",
+    "early_stop": 8,
+    "tbX": True
+  },
+  "metrics": "classification_metrics"
+}
+
+# Write the configuration to a new JSON file inside the project folder
+config_path = "/content/CRNN/my_colab_config.json"
+with open(config_path, 'w') as json_file:
+  json.dump(colab_config, json_file, indent=2)
+
+print(f"{config_path} created successfully!")
