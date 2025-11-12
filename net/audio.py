@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from torchaudio.transforms import Spectrogram, MelSpectrogram , ComplexNorm
+from torchaudio.transforms import Spectrogram, MelSpectrogram
 from torchaudio.transforms import TimeStretch, AmplitudeToDB 
 from torch.distributions import Uniform
 
@@ -35,7 +35,7 @@ class MelspectrogramStretch(MelSpectrogram):
                                                 fixed_rate=None)
         
         # Normalization (pot spec processing)
-        self.complex_norm = ComplexNorm(power=2.)
+        # self.complex_norm = ComplexNorm(power=2.)
         self.norm = SpecNormalization(norm)
 
     def forward(self, x, lengths=None):
@@ -51,7 +51,8 @@ class MelspectrogramStretch(MelSpectrogram):
             # Modify the rate accordingly
             lengths = (lengths.float()/rate).long()+1
         
-        x = self.complex_norm(x)
+        # x = self.complex_norm(x)
+        x = x.abs().pow(2.0)
         x = self.mel_scale(x)
 
         # Normalize melspectrogram

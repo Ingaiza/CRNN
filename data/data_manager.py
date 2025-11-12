@@ -128,8 +128,8 @@ class CSVDataManager(object):
     
         mfile = os.path.join(self.dir_path, 'metadata/UrbanSound8K.csv') 
         metadata_df = pd.read_csv(mfile).sample(frac=1)
-        self.metadata_df = self._remove_too_small(metadata_df, 1)
-
+        # self.metadata_df = self._remove_too_small(metadata_df, 1)
+        self.metadata_df = metadata_df
         self.classes = self._get_classes(self.metadata_df[['class', 'classID']])
         self.data_splits = self._10kfold_split(self.metadata_df)
         
