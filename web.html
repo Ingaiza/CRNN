@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Forestry Monitor (Leaflet)</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #eef2f3; }
+        h1 { color: #2c3e50; }
+        
+        /* Map Container */
+        #map { 
+            height: 600px; 
+            width: 100%; 
+            border-radius: 12px; 
+            border: 2px solid #bdc3c7;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        /* Status Bar */
+        #status { margin-bottom: 10px; font-weight: bold; color: #7f8c8d; }
+        
+        /* Legend Box */
+        .legend {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            margin-top: 15px;
+            display: inline-block;
+        }
+        .dot { height: 12px; width: 12px; display: inline-block; border-radius: 50%; margin-right: 5px; }
+    </style>
+</head>
+<body>
+
+    <h1>🌲 Forest Acoustic Sentinel</h1>
+    <div id="status">WebSocket Status: Disconnected</div>
+
+    <div id="map"></div>
+
+    <div class="legend">
+        <div><span class="dot" style="background: green;"></span>Natural Activity</div>
+        <div><span class="dot" style="background: gold;"></span>Human Activity</div>
+        <div><span class="dot" style="background: red;"></span><strong>ILLEGAL / UNNATURAL</strong></div>
+    </div>
+
+    <script>
+        // --- A. MAP SETUP ---
+        // Center map on Ruiru/Juja area (approximate forestry context)
+        // format: [lat, lng]
+        var map = L.map('map').setView([-1.1462, 36.9665], 13);
+
+        // Load OpenStreetMap Tiles (Free, no API Key)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // Define Custom Colored Icons (using GitHub CDN for reliable colored markers)
+        var LeafIcon = L.Icon.extend({
+            options: {
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                shadowSize: [41, 41]
+            }
+        });
+
+        var greenIcon = new LeafIcon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png'});
+        var goldIcon = new LeafIcon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png'});
+        var redIcon = new LeafIcon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png'});
+
+        // --- B. ROS CONNECTIONS ---
+        var ros = new ROSLIB.Ros({
+            url : 'ws://localhost:9090' // CHANGE THIS to your Jetson/Pi IP if not on same laptop
+        });
+
+        ros.on('connection', function() {
+            document.getElementById("status").innerHTML = "WebSocket Status: <span style='color:green'>Connected to ROS 2</span>";
+        });
+
+        ros.on('error', function(error) {
+            document.getElementById("status").innerHTML = "WebSocket Status: <span style='color:red'>Error</span>";
+        });
+
+        ros.on('close', function() {
+            document.getElementById("status").innerHTML = "WebSocket Status: Closed";
+        });
+
+        // --- C. SUBSCRIBER LOGIC ---
+        var alertListener = new ROSLIB.Topic({
+            ros : ros,
+            name : '/forest_alerts', 
+            messageType : 'std_msgs/String'
+        });
+
+        alertListener.subscribe(function(message) {
+            console.log("Received: " + message.data);
+            
+            // Parse the JSON string
+            try {
+                var data = JSON.parse(message.data); // Expected: {"status": "...", "lat": ..., "lng": ...}
+                var chosenIcon;
+                var popupText = `<b>Status:</b> ${data.status}<br><b>Time:</b> ${new Date().toLocaleTimeString()}`;
+
+                // Logic to choose color
+                if (data.status === "NATURAL") {
+                    chosenIcon = greenIcon;
+                } else if (data.status === "HUMAN") {
+                    chosenIcon = goldIcon;
+                } else if (data.status === "UNNATURAL") {
+                    chosenIcon = redIcon;
+                    // Optional: Audio Alert for browser
+                    // var audio = new Audio('alert_sound.mp3'); audio.play();
+                } else {
+                    chosenIcon = greenIcon; // Default
+                }
+
+                // Add Marker to Map
+                var marker = L.marker([data.lat, data.lng], {icon: chosenIcon}).addTo(map);
+                marker.bindPopup(popupText).openPopup();
+                
+                // Auto-pan to the latest alert
+                map.panTo([data.lat, data.lng]);
+
+            } catch (e) {
+                console.error("JSON Parse Error", e);
+            }
+        });
+    </script>
+</body>
+</html>

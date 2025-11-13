@@ -2,7 +2,7 @@
 
 import os, errno
 from PIL import Image
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 import soundfile as sf
 from matplotlib.ticker import LogLocator

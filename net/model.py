@@ -43,12 +43,15 @@ class AudioCRNN(BaseModel):
 
         return torch.where(lengths > 0, lengths, torch.tensor(1, device=lengths.device))
 
-    def forward(self, batch):    
+    def forward(self, batch, return_features=False):    
         # x-> (batch, time, channel)
         x, lengths, _ = batch # unpacking seqs, lengths and srs
+
         # x-> (batch, channel, time)
         xt = x.float().transpose(1,2)
+        
         # xt -> (batch, channel, freq, time)
+        # This is the "spectral processing" part
         xt, lengths = self.spec(xt, lengths)                
 
         # (batch, channel, freq, time)
@@ -61,7 +64,9 @@ class AudioCRNN(BaseModel):
         # xt -> (batch, time, channel*freq)
         batch, time = x.size()[:2]
         x = x.reshape(batch, time, -1)
-        # x_pack = torch.nn.utils.rnn.pack_padded_sequence(x, lengths, batch_first=True)
+        
+        # Pack the sequence for the RNN (LSTM)
+        # We ensure lengths are on CPU to avoid PyTorch errors
         x_pack = torch.nn.utils.rnn.pack_padded_sequence(x, lengths.cpu(), batch_first=True)
         
         # x -> (batch, time, lstm_out)
@@ -69,14 +74,24 @@ class AudioCRNN(BaseModel):
         x, _ = torch.nn.utils.rnn.pad_packed_sequence(x_pack, batch_first=True)
         
         # (batch, lstm_out)
-        x = self._many_to_one(x, lengths)
+        # This variable 'x' (renamed to 'embedding' for clarity) holds the 
+        # 64 rich features extracted from the audio.
+        embedding = self._many_to_one(x, lengths)
+        
+        # --- NEW FEATURE EXTRACTION LOGIC ---
+        if return_features:
+            # If we asked for features, stop here and return them.
+            # This is what the XGBoost model will use.
+            return embedding
+        # ------------------------------------
+
         # (batch, classes)
-        x = self.net['dense'](x)
+        # If we didn't ask for features, continue to the standard classification
+        x = self.net['dense'](embedding)
 
         x = F.log_softmax(x, dim=1)
 
         return x
-
     def predict(self, x):
         with torch.no_grad():
             out_raw = self.forward( x )
