@@ -4,4 +4,6 @@ dataset/
 CRNN.ipynb
 CRNN_training_output2-20251112T081448Z-1-001.zip
 CRNN_training_output2-20251112T081448Z-1-001/
-
+crnn/
+models/
+notebooks/
