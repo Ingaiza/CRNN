@@ -21,7 +21,7 @@ CFG_PATH = "/home/ingaiza/CRNN/crnn.cfg"
 # 2. The File You Want to Test
 # (Ensure this file exists in your Colab audio_data folder)
 # TEST_FILE = "/home/ingaiza/CRNN/dataset/audio/fold7/20_12054.wav"   
-TEST_FILE = "/home/ingaiza/CRNN/dataset/audio/val/chainsaw15s.wav"
+TEST_FILE = "/home/ingaiza/CRNN/dataset/audio/val/forest-ambience-296528.wav"
 
 CLASS_MAP = {
     0: "Natural",
