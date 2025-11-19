@@ -1,5 +1,6 @@
 import sys
 from unittest.mock import MagicMock
+import itertools # <--- Added for Truth Table generation
 
 # 1. Setup Environment
 sys.modules["tensorboardX"] = MagicMock()
@@ -23,13 +24,49 @@ XGB_MODEL_PATH = "/home/ingaiza/CRNN/models/xgboost_audio_classifier.json"
 CFG_PATH = "/home/ingaiza/CRNN/crnn.cfg" 
 
 # CHANGE THIS TO TEST DIFFERENT FILES
-TEST_FILE = "/home/ingaiza/CRNN/dataset/audio/val/group-talking-29731.wav"
+TEST_FILE = "/home/ingaiza/GoogleDrive/Ambience20251119_103537.wav"
 
 CLASS_MAP = {
     0: "Natural",
     1: "Unnatural",
     2: "Human Sound"
 }
+
+# --- VALIDATION LAYER ---
+def validate_prediction(probs):
+    """
+    Applies sensitivity analysis using a truth table of weights (0.76, 1.24).
+    Returns: (is_valid, pass_ratio)
+    """
+    original_winner_idx = np.argmax(probs)
+    
+    # Weights (Accuracy Allowance)
+    w_low = 0.76
+    w_high = 1.24
+    
+    # Generate Truth Table (8 combinations for 3 classes)
+    # Cartesian product of [Low, High] repeated 3 times
+    multipliers = [w_low, w_high]
+    combinations = list(itertools.product(multipliers, repeat=3))
+    
+    wins = 0
+    total_scenarios = len(combinations)
+
+    for coeffs in combinations:
+        # Apply weights: [P_N * w1,  P_U * w2,  P_H * w3]
+        weighted_probs = np.array(probs) * np.array(coeffs)
+        round_winner_idx = np.argmax(weighted_probs)
+        
+        # Check if the original winner still wins this scenario
+        if round_winner_idx == original_winner_idx:
+            wins += 1
+            
+    # Majority Rule: Must win more than half (e.g., 5 out of 8)
+    is_valid = wins > (total_scenarios / 2) 
+    pass_ratio = wins / total_scenarios
+    
+    return is_valid, pass_ratio
+# -----------------------
 
 def predict_hybrid():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -137,6 +174,8 @@ def predict_hybrid():
             
             final_probs = np.mean(window_probs, axis=0)
 
+        # --- VALIDATION CHECK ---
+        is_valid, pass_ratio = validate_prediction(final_probs)
         pred_idx = np.argmax(final_probs)
 
     except Exception as e:
@@ -148,8 +187,16 @@ def predict_hybrid():
     print("\n--- HYBRID Prediction Complete ---")
     print(f"Strategy Used: \033[1m{strategy_name}\033[0m")
     print(f"File: {os.path.basename(TEST_FILE)}")
-    print(f"Predicted Class: \033[1m{CLASS_MAP[pred_idx]}\033[0m")
-    print(f"Confidence: {final_probs[pred_idx]:.2%}")
+    
+    pred_class = CLASS_MAP[pred_idx]
+    print(f"Raw Prediction: \033[1m{pred_class}\033[0m ({final_probs[pred_idx]:.2%})")
+    
+    print(f"Validation Score: Won {pass_ratio:.0%} of scenarios.")
+    
+    if is_valid:
+        print("-> STATUS: \033[92mVALID ALERT\033[0m (Passed Sensitivity Check)")
+    else:
+        print("-> STATUS: \033[91mBLOCKED\033[0m (Prediction too weak/noisy)")
     
     print("\nFull Probabilities:")
     for i, name in CLASS_MAP.items():
