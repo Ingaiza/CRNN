@@ -20,11 +20,11 @@ from net.model import AudioCRNN
 
 # --- CONFIGURATION ---
 CRNN_MODEL_PATH = "/home/ingaiza/CRNN/models/CRNN_training_output2-20251112T081448Z-1-001/CRNN_training_output2/1111_140703/checkpoints/model_best.pth"
-XGB_MODEL_PATH = "/home/ingaiza/CRNN/models/xgboost_audio_classifier.json"
+XGB_MODEL_PATH = "/home/ingaiza/CRNN/models/xgboost_mixed_model.json"
 CFG_PATH = "/home/ingaiza/CRNN/crnn.cfg" 
 
 # CHANGE THIS TO TEST DIFFERENT FILES
-TEST_FILE = "/home/ingaiza/GoogleDrive/Ambience20251119_103537.wav"
+TEST_FILE = "/home/ingaiza/GoogleDrive/Ambience20251119_103522.wav"
 
 CLASS_MAP = {
     0: "Natural",
