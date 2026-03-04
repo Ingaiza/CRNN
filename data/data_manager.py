@@ -155,7 +155,7 @@ class CSVDataManager(object):
             ret[s] = []
 
             for row in df_split[['slice_file_name', 'class', 'classID', 'fold']].values:
-                fold_mod = 'audio/fold%s'%row[-1]
+                fold_mod = 'UrbanSound8K/audio/fold%s'%row[-1]
                 fname = os.path.join(self.dir_path, fold_mod, '%s'%row[0])
                 ret[s].append( {'path':fname, 'class':row[1], 'class_idx':row[2]} )
         return ret
